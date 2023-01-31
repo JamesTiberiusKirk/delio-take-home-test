@@ -1,4 +1,3 @@
-//go:generate mockgen -package finnhubconnector -destination finnhub_connector_mock.go -source finnhub_connector.go
 package finnhubwrapper
 
 import (

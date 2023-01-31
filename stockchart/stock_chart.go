@@ -1,3 +1,5 @@
+//go:generate mockgen -package stockchart -destination stock_chart_mock.go -source stock_chart.go
+
 package stockchart
 
 import (
@@ -29,6 +31,7 @@ func NewStockChart(repo stockRepo) *StockChart {
 		repo: repo,
 	}
 }
+
 func (c *StockChart) GetChart(stockName string) (*StockResult, error) {
 	result := StockResult{}
 
@@ -37,26 +40,29 @@ func (c *StockChart) GetChart(stockName string) (*StockResult, error) {
 		return nil, fmt.Errorf("error fetching quote for stock %s: %v", stockName, err)
 	}
 
+	if stockData == nil {
+		return nil, fmt.Errorf("no data for %s", stockName)
+	}
+
+	if stockData.C == nil || stockData.D == nil || stockData.Pc == nil {
+		return nil, fmt.Errorf("missing data for %s", stockName)
+	}
+
 	txCurrentPriceCh := make(chan float32)
 	txPrevousClosingPriceCh := make(chan float32)
 	txDifferenceCh := make(chan float32)
 
 	result.StockName = stockName
 
-	if stockData.C != nil {
-		result.CurrentPrice = *stockData.C
-		go concurentTenX(txCurrentPriceCh, result.CurrentPrice)
-	}
+	// NOTE: Yes I know, concurrency here doesn't make sense...explanation in README
+	result.CurrentPrice = stockData.GetC()
+	go concurentTenX(txCurrentPriceCh, result.CurrentPrice)
 
-	if stockData.Pc != nil {
-		result.PreviousClosingPrice = *stockData.Pc
-		go concurentTenX(txPrevousClosingPriceCh, result.PreviousClosingPrice)
-	}
+	result.PreviousClosingPrice = stockData.GetPc()
+	go concurentTenX(txPrevousClosingPriceCh, result.PreviousClosingPrice)
 
-	if stockData.D != nil {
-		result.Difference = *stockData.D
-		go concurentTenX(txDifferenceCh, result.Difference)
-	}
+	result.Difference = stockData.GetD()
+	go concurentTenX(txDifferenceCh, result.Difference)
 
 	result.TenXCurrentPrice = <-txCurrentPriceCh
 	result.TenXPreviousClosingPrice = <-txPrevousClosingPriceCh

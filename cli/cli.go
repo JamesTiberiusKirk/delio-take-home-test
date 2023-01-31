@@ -9,7 +9,7 @@ import (
 )
 
 type ConcurrentStockData struct {
-	Ch   chan *stockchart.StockResult
+	Err  error
 	Data *stockchart.StockResult
 }
 
@@ -24,10 +24,7 @@ func NewCli(chart *stockchart.StockChart) *Cli {
 }
 
 func (c *Cli) Run(stocks []string) {
-
-	// TODO: switch to wait groups
-
-	stocksData := map[string]stockchart.StockResult{}
+	stocksData := map[string]*stockchart.StockResult{}
 
 	wg := &sync.WaitGroup{}
 	for _, s := range stocks {
@@ -38,17 +35,24 @@ func (c *Cli) Run(stocks []string) {
 		go func(stockName string) {
 			defer wg.Done()
 			stockData, err := c.chart.GetChart(stockName)
+			stocksData[stockName] = nil
 			if err != nil {
-				panic(err) //TODO maybe not panic
+				// panic(err)
+				return
 			}
 
-			stocksData[stockName] = *stockData
+			stocksData[stockName] = stockData
 		}(s)
 	}
 
 	wg.Wait()
 
 	for k, v := range stocksData {
+		if v == nil {
+			fmt.Printf("%v\n", color.RedString("NO DATA FOR STOCK "+k))
+			continue
+		}
+
 		fmt.Println("---------------------------------------------")
 		fmt.Printf("Stock: \t\t\t%s x1\t\tx10\n", k)
 		fmt.Printf("Current Price: \t\t%f\t%f\n", v.CurrentPrice, v.TenXCurrentPrice)
@@ -57,9 +61,9 @@ func (c *Cli) Run(stocks []string) {
 		if v.Difference < 0 {
 			fmt.Printf("Loss: \t\t\t%v\n", color.RedString(fmt.Sprint(v.Difference, "\t\t", v.TenXDifference)))
 		} else if v.Difference > 0 {
-			fmt.Printf("Profit: \t\t%v\n", color.RedString(fmt.Sprint(v.Difference, "\t\t", v.TenXDifference)))
+			fmt.Printf("Profit: \t\t%v\n", color.GreenString(fmt.Sprint(v.Difference, "\t\t", v.TenXDifference)))
 		} else {
-			fmt.Printf("Profit/Loss: \t\t%v\n", color.RedString(fmt.Sprint(v.Difference, "\t\t", v.TenXDifference)))
+			fmt.Printf("Profit/Loss: \t\t%v\n", color.YellowString(fmt.Sprint(v.Difference, "\t\t", v.TenXDifference)))
 		}
 	}
 	fmt.Println("---------------------------------------------")
