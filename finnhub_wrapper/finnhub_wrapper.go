@@ -23,7 +23,6 @@ type FinnhubWapper struct {
 }
 
 func (c *FinnhubWapper) GetQuote(s string) (*finnhub.Quote, error) {
-	// TODO: TODOvsBackground?
 	res, _, err := c.fc.Quote(context.Background()).
 		Symbol(s).
 		Execute()

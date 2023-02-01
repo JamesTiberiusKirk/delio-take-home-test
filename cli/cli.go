@@ -38,6 +38,7 @@ func (c *Cli) Run(stocks []string) {
 			stocksData[stockName] = nil
 			if err != nil {
 				// panic(err)
+				// better to just continue in case the other stocks are fine
 				return
 			}
 
