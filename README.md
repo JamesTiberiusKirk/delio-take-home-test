@@ -1,5 +1,6 @@
 # How to
 ```sh 
+cp example.env .env # then place the finnhub api hey inside
 make install_dev_dep # to install mockgen
 make install
 make generate
